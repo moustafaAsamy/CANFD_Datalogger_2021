@@ -419,3 +419,4 @@ uint32_t HAL_FDCAN_GetError(FDCAN_HandleTypeDef *hfdcan);
 HAL_FDCAN_StateTypeDef HAL_FDCAN_GetState(FDCAN_HandleTypeDef *hfdcan);
 
 
+//all this macros are used for type_checking for oassed arguments
