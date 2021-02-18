@@ -301,6 +301,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   {
     assert_param(IS_FDCAN_CKDIV(hfdcan->Init.ClockDivider));
   }
+
   assert_param(IS_FDCAN_FRAME_FORMAT(hfdcan->Init.FrameFormat));
   assert_param(IS_FDCAN_MODE(hfdcan->Init.Mode));
   assert_param(IS_FUNCTIONAL_STATE(hfdcan->Init.AutoRetransmission));
@@ -310,6 +311,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   assert_param(IS_FDCAN_NOMINAL_SJW(hfdcan->Init.NominalSyncJumpWidth));
   assert_param(IS_FDCAN_NOMINAL_TSEG1(hfdcan->Init.NominalTimeSeg1));
   assert_param(IS_FDCAN_NOMINAL_TSEG2(hfdcan->Init.NominalTimeSeg2));
+
   if (hfdcan->Init.FrameFormat == FDCAN_FRAME_FD_BRS)
   {
     assert_param(IS_FDCAN_DATA_PRESCALER(hfdcan->Init.DataPrescaler));
@@ -321,46 +323,15 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   assert_param(IS_FDCAN_MAX_VALUE(hfdcan->Init.ExtFiltersNbr, SRAMCAN_FLE_NBR));
   assert_param(IS_FDCAN_TX_FIFO_QUEUE_MODE(hfdcan->Init.TxFifoQueueMode));
 
-#if USE_HAL_FDCAN_REGISTER_CALLBACKS == 1
-  if (hfdcan->State == HAL_FDCAN_STATE_RESET)
-  {
-    /* Allocate lock resource and initialize it */
-    hfdcan->Lock = HAL_UNLOCKED;
 
-    /* Reset callbacks to legacy functions */
-    hfdcan->TxEventFifoCallback         = HAL_FDCAN_TxEventFifoCallback;         /* Legacy weak TxEventFifoCallback */
-    hfdcan->RxFifo0Callback             = HAL_FDCAN_RxFifo0Callback;             /* Legacy weak RxFifo0Callback     */
-    hfdcan->RxFifo1Callback             = HAL_FDCAN_RxFifo1Callback;             /* Legacy weak RxFifo1Callback     */
-    hfdcan->TxFifoEmptyCallback         = HAL_FDCAN_TxFifoEmptyCallback;         /* Legacy weak TxFifoEmptyCallback */
-    hfdcan->TxBufferCompleteCallback    = HAL_FDCAN_TxBufferCompleteCallback;    /* Legacy weak
-                                                                                    TxBufferCompleteCallback        */
-    hfdcan->TxBufferAbortCallback       = HAL_FDCAN_TxBufferAbortCallback;       /* Legacy weak
-                                                                                    TxBufferAbortCallback           */
-    hfdcan->HighPriorityMessageCallback = HAL_FDCAN_HighPriorityMessageCallback; /* Legacy weak
-                                                                                    HighPriorityMessageCallback     */
-    hfdcan->TimestampWraparoundCallback = HAL_FDCAN_TimestampWraparoundCallback; /* Legacy weak
-                                                                                    TimestampWraparoundCallback     */
-    hfdcan->TimeoutOccurredCallback     = HAL_FDCAN_TimeoutOccurredCallback;     /* Legacy weak
-                                                                                    TimeoutOccurredCallback         */
-    hfdcan->ErrorCallback               = HAL_FDCAN_ErrorCallback;               /* Legacy weak ErrorCallback       */
-    hfdcan->ErrorStatusCallback         = HAL_FDCAN_ErrorStatusCallback;         /* Legacy weak ErrorStatusCallback */
-
-    if (hfdcan->MspInitCallback == NULL)
-    {
-      hfdcan->MspInitCallback = HAL_FDCAN_MspInit;  /* Legacy weak MspInit */
-    }
-
-    /* Init the low level hardware: CLOCK, NVIC */
-    hfdcan->MspInitCallback(hfdcan);
-  }
-#else
+#if 1
   if (hfdcan->State == HAL_FDCAN_STATE_RESET)
   {
     /* Allocate lock resource and initialize it */
     hfdcan->Lock = HAL_UNLOCKED;
 
     /* Init the low level hardware: CLOCK, NVIC */
-    HAL_FDCAN_MspInit(hfdcan);
+   // HAL_FDCAN_MspInit(hfdcan);
   }
 #endif /* USE_HAL_FDCAN_REGISTER_CALLBACKS */
 
@@ -370,7 +341,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   /* Get tick */
   tickstart = HAL_GetTick();
 
-  /* Check Sleep mode acknowledge */
+  /* Check Sleep mode acknowledge  make sure that clock is working ok */
   while ((hfdcan->Instance->CCCR & FDCAN_CCCR_CSA) == FDCAN_CCCR_CSA)
   {
     if ((HAL_GetTick() - tickstart) > FDCAN_TIMEOUT_VALUE)
@@ -450,7 +421,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   /* Set FDCAN Frame Format */
   MODIFY_REG(hfdcan->Instance->CCCR, FDCAN_FRAME_FD_BRS, hfdcan->Init.FrameFormat);
 
-  /* Reset FDCAN Operation Mode */
+  /* Reset FDCAN Operation Mode ,clear before you write */
   CLEAR_BIT(hfdcan->Instance->CCCR, (FDCAN_CCCR_TEST | FDCAN_CCCR_MON | FDCAN_CCCR_ASM));
   CLEAR_BIT(hfdcan->Instance->TEST, FDCAN_TEST_LBCK);
 
@@ -511,7 +482,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef *hfdcan)
   /* Select between Tx FIFO and Tx Queue operation modes */
   SET_BIT(hfdcan->Instance->TXBC, hfdcan->Init.TxFifoQueueMode);
 
-  /* Calculate each RAM block address */
+  /* Calculate each RAM block address , register the ram address */
   FDCAN_CalcultateRamBlockAddresses(hfdcan);
 
   /* Initialize the Latest Tx request buffer index */
@@ -573,681 +544,12 @@ HAL_StatusTypeDef HAL_FDCAN_DeInit(FDCAN_HandleTypeDef *hfdcan)
   return HAL_OK;
 }
 
-/**
-  * @brief  Initializes the FDCAN MSP.
-  * @param  hfdcan pointer to an FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified FDCAN.
-  * @retval None
-  */
-__weak void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef *hfdcan)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hfdcan);
-  /* NOTE : This function Should not be modified, when the callback is needed,
-            the HAL_FDCAN_MspInit could be implemented in the user file
-   */
-}
 
-/**
-  * @brief  DeInitializes the FDCAN MSP.
-  * @param  hfdcan pointer to an FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified FDCAN.
-  * @retval None
-  */
-__weak void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef *hfdcan)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hfdcan);
-  /* NOTE : This function Should not be modified, when the callback is needed,
-            the HAL_FDCAN_MspDeInit could be implemented in the user file
-   */
-}
 
-/**
-  * @brief  Enter FDCAN peripheral in sleep mode.
-  * @param  hfdcan pointer to an FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified FDCAN.
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_EnterPowerDownMode(FDCAN_HandleTypeDef *hfdcan)
-{
-  uint32_t tickstart;
 
-  /* Request clock stop */
-  SET_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_CSR);
 
-  /* Get tick */
-  tickstart = HAL_GetTick();
 
-  /* Wait until FDCAN is ready for power down */
-  while ((hfdcan->Instance->CCCR & FDCAN_CCCR_CSA) == 0U)
-  {
-    if ((HAL_GetTick() - tickstart) > FDCAN_TIMEOUT_VALUE)
-    {
-      /* Update error code */
-      hfdcan->ErrorCode |= HAL_FDCAN_ERROR_TIMEOUT;
 
-      /* Change FDCAN state */
-      hfdcan->State = HAL_FDCAN_STATE_ERROR;
-
-      return HAL_ERROR;
-    }
-  }
-
-  /* Return function status */
-  return HAL_OK;
-}
-
-/**
-  * @brief  Exit power down mode.
-  * @param  hfdcan pointer to an FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified FDCAN.
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_ExitPowerDownMode(FDCAN_HandleTypeDef *hfdcan)
-{
-  uint32_t tickstart;
-
-  /* Reset clock stop request */
-  CLEAR_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_CSR);
-
-  /* Get tick */
-  tickstart = HAL_GetTick();
-
-  /* Wait until FDCAN exits sleep mode */
-  while ((hfdcan->Instance->CCCR & FDCAN_CCCR_CSA) == FDCAN_CCCR_CSA)
-  {
-    if ((HAL_GetTick() - tickstart) > FDCAN_TIMEOUT_VALUE)
-    {
-      /* Update error code */
-      hfdcan->ErrorCode |= HAL_FDCAN_ERROR_TIMEOUT;
-
-      /* Change FDCAN state */
-      hfdcan->State = HAL_FDCAN_STATE_ERROR;
-
-      return HAL_ERROR;
-    }
-  }
-
-  /* Enter normal operation */
-  CLEAR_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
-
-  /* Return function status */
-  return HAL_OK;
-}
-
-#if USE_HAL_FDCAN_REGISTER_CALLBACKS == 1
-/**
-  * @brief  Register a FDCAN CallBack.
-  *         To be used instead of the weak predefined callback
-  * @param  hfdcan pointer to a FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for FDCAN module
-  * @param  CallbackID ID of the callback to be registered
-  *         This parameter can be one of the following values:
-  *           @arg @ref HAL_FDCAN_TX_FIFO_EMPTY_CB_ID Tx Fifo Empty callback ID
-  *           @arg @ref HAL_FDCAN_HIGH_PRIO_MESSAGE_CB_ID High priority message callback ID
-  *           @arg @ref HAL_FDCAN_TIMESTAMP_WRAPAROUND_CB_ID Timestamp wraparound callback ID
-  *           @arg @ref HAL_FDCAN_TIMEOUT_OCCURRED_CB_ID Timeout occurred callback ID
-  *           @arg @ref HAL_FDCAN_ERROR_CALLBACK_CB_ID Error callback ID
-  *           @arg @ref HAL_FDCAN_MSPINIT_CB_ID MspInit callback ID
-  *           @arg @ref HAL_FDCAN_MSPDEINIT_CB_ID MspDeInit callback ID
-  * @param  pCallback pointer to the Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterCallback(FDCAN_HandleTypeDef *hfdcan, HAL_FDCAN_CallbackIDTypeDef CallbackID,
-                                             void (* pCallback)(FDCAN_HandleTypeDef *_hFDCAN))
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    switch (CallbackID)
-    {
-      case HAL_FDCAN_TX_FIFO_EMPTY_CB_ID :
-        hfdcan->TxFifoEmptyCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_HIGH_PRIO_MESSAGE_CB_ID :
-        hfdcan->HighPriorityMessageCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_TIMESTAMP_WRAPAROUND_CB_ID :
-        hfdcan->TimestampWraparoundCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_TIMEOUT_OCCURRED_CB_ID :
-        hfdcan->TimeoutOccurredCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_ERROR_CALLBACK_CB_ID :
-        hfdcan->ErrorCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_MSPINIT_CB_ID :
-        hfdcan->MspInitCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_MSPDEINIT_CB_ID :
-        hfdcan->MspDeInitCallback = pCallback;
-        break;
-
-      default :
-        /* Update the error code */
-        hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else if (hfdcan->State == HAL_FDCAN_STATE_RESET)
-  {
-    switch (CallbackID)
-    {
-      case HAL_FDCAN_MSPINIT_CB_ID :
-        hfdcan->MspInitCallback = pCallback;
-        break;
-
-      case HAL_FDCAN_MSPDEINIT_CB_ID :
-        hfdcan->MspDeInitCallback = pCallback;
-        break;
-
-      default :
-        /* Update the error code */
-        hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Unregister a FDCAN CallBack.
-  *         FDCAN callback is redirected to the weak predefined callback
-  * @param  hfdcan pointer to a FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for FDCAN module
-  * @param  CallbackID ID of the callback to be unregistered
-  *         This parameter can be one of the following values:
-  *           @arg @ref HAL_FDCAN_TX_FIFO_EMPTY_CB_ID Tx Fifo Empty callback ID
-  *           @arg @ref HAL_FDCAN_HIGH_PRIO_MESSAGE_CB_ID High priority message callback ID
-  *           @arg @ref HAL_FDCAN_TIMESTAMP_WRAPAROUND_CB_ID Timestamp wraparound callback ID
-  *           @arg @ref HAL_FDCAN_TIMEOUT_OCCURRED_CB_ID Timeout occurred callback ID
-  *           @arg @ref HAL_FDCAN_ERROR_CALLBACK_CB_ID Error callback ID
-  *           @arg @ref HAL_FDCAN_MSPINIT_CB_ID MspInit callback ID
-  *           @arg @ref HAL_FDCAN_MSPDEINIT_CB_ID MspDeInit callback ID
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterCallback(FDCAN_HandleTypeDef *hfdcan, HAL_FDCAN_CallbackIDTypeDef CallbackID)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    switch (CallbackID)
-    {
-      case HAL_FDCAN_TX_FIFO_EMPTY_CB_ID :
-        hfdcan->TxFifoEmptyCallback = HAL_FDCAN_TxFifoEmptyCallback;
-        break;
-
-      case HAL_FDCAN_HIGH_PRIO_MESSAGE_CB_ID :
-        hfdcan->HighPriorityMessageCallback = HAL_FDCAN_HighPriorityMessageCallback;
-        break;
-
-      case HAL_FDCAN_TIMESTAMP_WRAPAROUND_CB_ID :
-        hfdcan->TimestampWraparoundCallback = HAL_FDCAN_TimestampWraparoundCallback;
-        break;
-
-      case HAL_FDCAN_TIMEOUT_OCCURRED_CB_ID :
-        hfdcan->TimeoutOccurredCallback = HAL_FDCAN_TimeoutOccurredCallback;
-        break;
-
-      case HAL_FDCAN_ERROR_CALLBACK_CB_ID :
-        hfdcan->ErrorCallback = HAL_FDCAN_ErrorCallback;
-        break;
-
-      case HAL_FDCAN_MSPINIT_CB_ID :
-        hfdcan->MspInitCallback = HAL_FDCAN_MspInit;
-        break;
-
-      case HAL_FDCAN_MSPDEINIT_CB_ID :
-        hfdcan->MspDeInitCallback = HAL_FDCAN_MspDeInit;
-        break;
-
-      default :
-        /* Update the error code */
-        hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else if (hfdcan->State == HAL_FDCAN_STATE_RESET)
-  {
-    switch (CallbackID)
-    {
-      case HAL_FDCAN_MSPINIT_CB_ID :
-        hfdcan->MspInitCallback = HAL_FDCAN_MspInit;
-        break;
-
-      case HAL_FDCAN_MSPDEINIT_CB_ID :
-        hfdcan->MspDeInitCallback = HAL_FDCAN_MspDeInit;
-        break;
-
-      default :
-        /* Update the error code */
-        hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Tx Event Fifo FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_TxEventFifoCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Tx Event Fifo Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterTxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan,
-                                                        pFDCAN_TxEventFifoCallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxEventFifoCallback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Tx Event Fifo FDCAN Callback
-  *         Tx Event Fifo FDCAN Callback is redirected to the weak HAL_FDCAN_TxEventFifoCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterTxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxEventFifoCallback = HAL_FDCAN_TxEventFifoCallback; /* Legacy weak TxEventFifoCallback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Rx Fifo 0 FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_RxFifo0Callback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Rx Fifo 0 Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterRxFifo0Callback(FDCAN_HandleTypeDef *hfdcan,
-                                                    pFDCAN_RxFifo0CallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->RxFifo0Callback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Rx Fifo 0 FDCAN Callback
-  *         Rx Fifo 0 FDCAN Callback is redirected to the weak HAL_FDCAN_RxFifo0Callback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterRxFifo0Callback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->RxFifo0Callback = HAL_FDCAN_RxFifo0Callback; /* Legacy weak RxFifo0Callback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Rx Fifo 1 FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_RxFifo1Callback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Rx Fifo 1 Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterRxFifo1Callback(FDCAN_HandleTypeDef *hfdcan,
-                                                    pFDCAN_RxFifo1CallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->RxFifo1Callback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Rx Fifo 1 FDCAN Callback
-  *         Rx Fifo 1 FDCAN Callback is redirected to the weak HAL_FDCAN_RxFifo1Callback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterRxFifo1Callback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->RxFifo1Callback = HAL_FDCAN_RxFifo1Callback; /* Legacy weak RxFifo1Callback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Tx Buffer Complete FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_TxBufferCompleteCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Tx Buffer Complete Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterTxBufferCompleteCallback(FDCAN_HandleTypeDef *hfdcan,
-                                                             pFDCAN_TxBufferCompleteCallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxBufferCompleteCallback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Tx Buffer Complete FDCAN Callback
-  *         Tx Buffer Complete FDCAN Callback is redirected to
-  *         the weak HAL_FDCAN_TxBufferCompleteCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterTxBufferCompleteCallback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxBufferCompleteCallback = HAL_FDCAN_TxBufferCompleteCallback; /* Legacy weak TxBufferCompleteCallback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Tx Buffer Abort FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_TxBufferAbortCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Tx Buffer Abort Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterTxBufferAbortCallback(FDCAN_HandleTypeDef *hfdcan,
-                                                          pFDCAN_TxBufferAbortCallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxBufferAbortCallback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Tx Buffer Abort FDCAN Callback
-  *         Tx Buffer Abort FDCAN Callback is redirected to
-  *         the weak HAL_FDCAN_TxBufferAbortCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterTxBufferAbortCallback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->TxBufferAbortCallback = HAL_FDCAN_TxBufferAbortCallback; /* Legacy weak TxBufferAbortCallback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  Register Error Status FDCAN Callback
-  *         To be used instead of the weak HAL_FDCAN_ErrorStatusCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @param  pCallback pointer to the Error Status Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_RegisterErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan,
-                                                        pFDCAN_ErrorStatusCallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-    return HAL_ERROR;
-  }
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->ErrorStatusCallback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-/**
-  * @brief  UnRegister the Error Status FDCAN Callback
-  *         Error Status FDCAN Callback is redirected to the weak HAL_FDCAN_ErrorStatusCallback() predefined callback
-  * @param  hfdcan FDCAN handle
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_FDCAN_UnRegisterErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (hfdcan->State == HAL_FDCAN_STATE_READY)
-  {
-    hfdcan->ErrorStatusCallback = HAL_FDCAN_ErrorStatusCallback; /* Legacy weak ErrorStatusCallback  */
-  }
-  else
-  {
-    /* Update the error code */
-    hfdcan->ErrorCode |= HAL_FDCAN_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  return status;
-}
-
-#endif /* USE_HAL_FDCAN_REGISTER_CALLBACKS */
-
-/**
-  * @}
-  */
 
 /** @defgroup FDCAN_Exported_Functions_Group2 Configuration functions
   *  @brief    FDCAN Configuration functions.
@@ -2148,7 +1450,7 @@ HAL_StatusTypeDef HAL_FDCAN_AddMessageToTxFifoQ(FDCAN_HandleTypeDef *hfdcan, FDC
       /* Activate the corresponding transmission request */
       hfdcan->Instance->TXBAR = ((uint32_t)1 << PutIndex);
 
-      /* Store the Latest Tx FIFO/Queue Request Buffer Index */
+      /* Store the Latest Tx FIFO/Queue Request Buffer Index ?? */
       hfdcan->LatestTxFifoQRequest = ((uint32_t)1 << PutIndex);
     }
 
@@ -2430,17 +1732,17 @@ HAL_StatusTypeDef HAL_FDCAN_GetTxEvent(FDCAN_HandleTypeDef *hfdcan, FDCAN_TxEven
   * @param  HpMsgStatus pointer to an FDCAN_HpMsgStatusTypeDef structure.
   * @retval HAL status
   */
-HAL_StatusTypeDef HAL_FDCAN_GetHighPriorityMessageStatus(FDCAN_HandleTypeDef *hfdcan,
-                                                         FDCAN_HpMsgStatusTypeDef *HpMsgStatus)
-{
-  HpMsgStatus->FilterList = ((hfdcan->Instance->HPMS & FDCAN_HPMS_FLST) >> FDCAN_HPMS_FLST_Pos);
-  HpMsgStatus->FilterIndex = ((hfdcan->Instance->HPMS & FDCAN_HPMS_FIDX) >> FDCAN_HPMS_FIDX_Pos);
-  HpMsgStatus->MessageStorage = (hfdcan->Instance->HPMS & FDCAN_HPMS_MSI);
-  HpMsgStatus->MessageIndex = (hfdcan->Instance->HPMS & FDCAN_HPMS_BIDX);
-
-  /* Return function status */
-  return HAL_OK;
-}
+//HAL_StatusTypeDef HAL_FDCAN_GetHighPriorityMessageStatus(FDCAN_HandleTypeDef *hfdcan,
+//                                                         FDCAN_HpMsgStatusTypeDef *HpMsgStatus)
+//{
+//  HpMsgStatus->FilterList = ((hfdcan->Instance->HPMS & FDCAN_HPMS_FLST) >> FDCAN_HPMS_FLST_Pos);
+//  HpMsgStatus->FilterIndex = ((hfdcan->Instance->HPMS & FDCAN_HPMS_FIDX) >> FDCAN_HPMS_FIDX_Pos);
+//  HpMsgStatus->MessageStorage = (hfdcan->Instance->HPMS & FDCAN_HPMS_MSI);
+//  HpMsgStatus->MessageIndex = (hfdcan->Instance->HPMS & FDCAN_HPMS_BIDX);
+//
+//  /* Return function status */
+//  return HAL_OK;
+//}
 
 /**
   * @brief  Get protocol status.
@@ -2642,6 +1944,7 @@ HAL_StatusTypeDef HAL_FDCAN_ExitRestrictedOperationMode(FDCAN_HandleTypeDef *hfd
   * @param  InterruptLine Interrupt line.
   *         This parameter can be a value of @arg FDCAN_Interrupt_Line.
   * @retval HAL status
+  * whole group not single interrupt
   */
 HAL_StatusTypeDef HAL_FDCAN_ConfigInterruptLines(FDCAN_HandleTypeDef *hfdcan, uint32_t ITList, uint32_t InterruptLine)
 {
@@ -2889,10 +2192,12 @@ void HAL_FDCAN_IRQHandler(FDCAN_HandleTypeDef *hfdcan)
 
   TxEventFifoITs = hfdcan->Instance->IR & FDCAN_TX_EVENT_FIFO_MASK;
   TxEventFifoITs &= hfdcan->Instance->IE;
+
   RxFifo0ITs = hfdcan->Instance->IR & FDCAN_RX_FIFO0_MASK;
   RxFifo0ITs &= hfdcan->Instance->IE;
   RxFifo1ITs = hfdcan->Instance->IR & FDCAN_RX_FIFO1_MASK;
   RxFifo1ITs &= hfdcan->Instance->IE;
+
   Errors = hfdcan->Instance->IR & FDCAN_ERROR_MASK;
   Errors &= hfdcan->Instance->IE;
   ErrorStatusITs = hfdcan->Instance->IR & FDCAN_ERROR_STATUS_MASK;
@@ -3491,7 +2796,7 @@ static void FDCAN_CopyMessageToRAM(FDCAN_HandleTypeDef *hfdcan, FDCAN_TxHeaderTy
   *TxAddress = TxElementW2;
   TxAddress++;
 
-  /* Write Tx payload to the message RAM */
+  /* Write Tx payload to the message RAM ,what happens if we removed the 32typecasting*/
   for (ByteCounter = 0; ByteCounter < DLCtoBytes[pTxHeader->DataLength >> 16U]; ByteCounter += 4U)
   {
     *TxAddress = (((uint32_t)pTxData[ByteCounter + 3U] << 24U) |
