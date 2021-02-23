@@ -7,7 +7,7 @@
   *          peripheral:
   *           + Initialization and de-initialization functions
   *             ++ Initialization and Configuration of ADC
-  *           + Operation functions
+  *           + Operation functions d
   *             ++ Start, stop, get result of conversions of regular
   *                group, using 3 possible modes: polling, interruption or DMA.
   *           + Control functions
