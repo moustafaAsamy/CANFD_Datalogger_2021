@@ -45,12 +45,12 @@ extern "C" {
 /** @addtogroup FLASH_RAMFUNC_Exported_Functions_Group1
   * @{
   */
-/* Peripheral Control functions  ************************************************/
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_EnableRunPowerDown(void);
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_DisableRunPowerDown(void);
-#if defined (FLASH_OPTR_DBANK)
-__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_OB_DBankConfig(uint32_t DBankConfig);
-#endif
+///* Peripheral Control functions  ************************************************/
+//__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_EnableRunPowerDown(void);
+//__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_DisableRunPowerDown(void);
+//#if defined (FLASH_OPTR_DBANK)
+//__RAM_FUNC HAL_StatusTypeDef HAL_FLASHEx_OB_DBankConfig(uint32_t DBankConfig);
+//#endif
 /**
   * @}
   */

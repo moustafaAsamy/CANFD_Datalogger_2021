@@ -761,7 +761,7 @@ typedef  void (*pSPI_CallbackTypeDef)(SPI_HandleTypeDef *hspi); /*!< pointer to 
 
 /* Include SPI HAL Extended module */
 #include "stm32g4xx_hal_spi_ex.h"
-
+#include "stm32g4xx_hal_def.h"
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup SPI_Exported_Functions
   * @{

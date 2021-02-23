@@ -62,6 +62,11 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+
+
+
+
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -156,6 +161,10 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
+
+
+
+
 
 #ifdef  USE_FULL_ASSERT
 /**
